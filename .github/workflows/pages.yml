@@ -1,22 +1,17 @@
-# ينشر الواجهة على GitHub Pages. فعّلها مرة واحدة: Settings → Pages → Source: GitHub Actions
+# يبني الواجهة وينشرها على فرع gh-pages مع كل push، وGitHub Pages يعرض هذا الفرع.
 name: Deploy demo to GitHub Pages
 on:
   push:
     branches: [main, claude/cool-goldberg-4zr6nl]
   workflow_dispatch:
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 concurrency:
   group: pages
   cancel-in-progress: true
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -28,11 +23,13 @@ jobs:
         working-directory: client
       - run: npm run build
         working-directory: client
-      - uses: actions/configure-pages@v5
-        with:
-          enablement: true
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: client/dist
-      - id: deploy
-        uses: actions/deploy-pages@v4
+      - name: Publish dist to gh-pages
+        working-directory: client/dist
+        run: |
+          touch .nojekyll
+          git init -q -b gh-pages
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -qm "Publish ${GITHUB_SHA}"
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" gh-pages

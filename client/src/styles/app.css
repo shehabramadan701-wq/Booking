@@ -339,12 +339,12 @@ button:disabled { cursor: not-allowed; opacity: .5; }
 .summary-hotel { display: flex; gap: 12px; align-items: center; text-align: start; }
 .summary-hotel img, .summary-hotel .img-fallback { width: 92px; height: 72px; border-radius: 10px; object-fit: cover; flex: none; }
 .summary-hotel div { display: flex; flex-direction: column; line-height: 1.4; }
-.summary-facts, .totals { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; margin: 0; padding-top: 12px; border-top: 1px solid var(--line); }
-.summary-facts dt, .totals dt { color: var(--muted); }
+.summary-facts, .totals { display: grid; grid-template-columns: auto 1fr; gap: 6px 0; margin: 0; padding-top: 12px; border-top: 1px solid var(--line); }
+.summary-facts dt, .totals dt { color: var(--muted); padding-inline-end: 12px; }
 .summary-facts dd, .totals dd { margin: 0; text-align: end; font-weight: 500; }
 .grand { font-size: 1.2rem; font-weight: 700 !important; color: var(--ink) !important; padding-top: 8px; border-top: 1px solid var(--line); }
 .promo { display: flex; align-items: center; gap: 8px; border: 1px dashed #cfcabd; border-radius: 10px; padding: 6px 10px; }
-.promo input { flex: 1; border: 0; outline: 0; min-width: 0; text-transform: uppercase; background: none; }
+.promo input { flex: 1; width: 0; border: 0; outline: 0; min-width: 0; text-transform: uppercase; background: none; }
 .promo svg { color: var(--muted); }
 .modal-wrap { position: fixed; inset: 0; background: rgba(23, 35, 31, .55); z-index: 90; display: grid; place-items: center; padding: 16px; }
 .modal { background: #fff; border-radius: 18px; padding: 24px; width: min(460px, 100%); display: grid; gap: 12px; box-shadow: var(--shadow-lg); }
@@ -458,7 +458,16 @@ button:disabled { cursor: not-allowed; opacity: .5; }
   .header-in { gap: 8px; }
   .logo span { font-size: 1.2rem; }
 }
+/* أعمدة الشبكة لا تتمدد خارج البطاقة مهما كان المحتوى */
+.summary, .stay, .modal, .confirm, .checkout-form, .auth form { grid-template-columns: minmax(0, 1fr); }
+.summary-facts dd, .totals dd { min-width: 0; overflow-wrap: anywhere; }
+
 @media print {
-  .header, .footer, .no-print { display: none !important; }
-  body { background: #fff; }
+  @page { margin: 14mm; }
+  .header, .footer, .no-print, .skip { display: none !important; }
+  html, body { background: #fff !important; }
+  .container, .narrow { width: 100% !important; max-width: none !important; margin: 0 !important; padding: 0 !important; }
+  .card { box-shadow: none !important; border-color: #bbb; }
+  .confirm { break-inside: avoid; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }

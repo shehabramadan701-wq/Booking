@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { BedDouble, CalendarDays, Check, ChevronLeft, ChevronRight, Clock, MapPin, Maximize, SearchX, Users, X } from 'lucide-react';
 import { useApp } from '../context/AppContext.jsx';
 import { api } from '../api/index.js';
-import { AMENITIES, destById, MEALS, PROPERTY_TYPES } from '../data/catalog.js';
+import { AMENITIES, destById, img, MEALS, PROPERTY_TYPES } from '../data/catalog.js';
 import { addDays, quote, safeDates } from '../lib/search.js';
 import { DateRange } from '../components/SearchBox.jsx';
 import { Empty, FavButton, Img, Rating, Stars, Stepper } from '../components/ui.jsx';
@@ -36,7 +36,7 @@ function Gallery({ images, name }) {
         <div className="lightbox" role="dialog" aria-modal="true" onClick={() => setAt(null)}>
           <button className="lb-close" aria-label="Close"><X /></button>
           <button className="lb-nav prev" onClick={(e) => { e.stopPropagation(); setAt((at - 1 + n) % n); }} aria-label="Previous"><ChevronRight className="flip" /></button>
-          <img src={`https://images.unsplash.com/photo-${images[at]}?auto=format&fit=crop&w=1600&q=75`} alt={name} onClick={(e) => e.stopPropagation()} />
+          <img src={img(images[at], 1600)} alt={name} onClick={(e) => e.stopPropagation()} />
           <button className="lb-nav next" onClick={(e) => { e.stopPropagation(); setAt((at + 1) % n); }} aria-label="Next"><ChevronLeft className="flip" /></button>
           <span className="lb-count">{at + 1} / {n}</span>
         </div>

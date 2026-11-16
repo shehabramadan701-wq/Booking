@@ -1,8 +1,11 @@
 // بيانات تجريبية (Dummy) — تُستبدل لاحقاً ببيانات المورّد (TBO) عبر الـ Backend.
 // الملف ESM خالص بدون أي اعتماد على المتصفح حتى يستخدمه الخادم أيضاً.
 
+// في نسخة المعاينة (Artifact) تُحمَّل الصور من ملفات محلية لأن الروابط الخارجية محجوبة هناك
 export const img = (id, w = 800) =>
-  `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=${w}&q=70`;
+  globalThis.__NZ_ARTIFACT
+    ? `img/${id}.jpg`
+    : `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=${w}&q=70`;
 
 const EXTERIORS = [
   '1566073771259-6a8506099945', '1542314831-068cd1dbfeeb', '1551882547-ff40c63fe5fa',

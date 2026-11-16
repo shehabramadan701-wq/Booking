@@ -32,7 +32,9 @@ function newRef() {
 export default function Checkout() {
   const [sp] = useSearchParams();
   const nav = useNavigate();
-  const { tx, L, lang, money, fmtDate, factor, admin, user, addBooking, currency } = useApp();
+  const { tx, L, lang, money, fmtDate, factor, admin, user, addBooking, saveBooking, currency } = useApp();
+  const [busy, setBusy] = useState(false);
+  const [apiError, setApiError] = useState('');
   const [h, setH] = useState(undefined);
   const [form, setForm] = useState(() => {
     const [first = '', ...rest] = (user?.name || '').split(' ');
@@ -93,8 +95,31 @@ export default function Checkout() {
   };
   const submit = (e) => {
     e.preventDefault();
-    if (validate()) setGateway('open');
-    else document.querySelector('.field.err input, .field.err select')?.focus();
+    if (!validate()) { document.querySelector('.field.err input, .field.err select')?.focus(); return; }
+    if (api.remote) payRemote(); else setGateway('open');
+  };
+  // الوضع الفعلي: الخادم يحسب السعر وينشئ فاتورة MyFatoorah ثم نحوّل العميل لصفحة الدفع
+  const payRemote = async () => {
+    setBusy(true); setApiError('');
+    try {
+      const guest = { name: `${form.first.trim()} ${form.last.trim()}`, email: form.email.trim(), phone: form.phone.trim(), country: form.country };
+      const r = await api.createBooking({
+        hotelId: h.id, roomId: room.id, rateId: rate.id, checkIn, checkOut, adults: ad, children: ch, rooms: rm,
+        guest, notes: form.notes.trim().slice(0, 300), promo: promo?.code, method, lang, currency,
+      });
+      saveBooking({
+        ref: r.ref, status: r.status, createdAt: new Date().toISOString(), hotelId: h.id, roomId: room.id, rateId: rate.id,
+        meal: rate.meal, refundable: rate.refundable, checkIn, checkOut, nights, adults: ad, children: ch, rooms: rm,
+        guest, method, currency, totalUsd: r.total.total, remote: true,
+      });
+      if (r.paymentUrl) window.location.assign(r.paymentUrl);
+      else nav(`/booking/${r.ref}`, { replace: true });
+    } catch (err) {
+      setApiError(err.message === 'rate_unavailable'
+        ? tx('هذا السعر لم يعد متاحاً. ارجع لصفحة الفندق واختر سعراً آخر.', 'This rate is no longer available. Go back to the hotel page and pick another rate.')
+        : tx('تعذّر بدء عملية الدفع ولم يُخصم أي مبلغ. حاول مرة أخرى بعد قليل.', 'We could not start the payment and nothing was charged. Please try again shortly.'));
+      setBusy(false);
+    }
   };
   const pay = (ok) => {
     setGateway('processing');
@@ -163,7 +188,8 @@ export default function Checkout() {
               <span>{tx('أوافق على شروط الحجز وسياسة الإلغاء الخاصة بهذا السعر.', 'I agree to the booking terms and the cancellation policy for this rate.')}</span>
             </label>
             {errors.agree && <em className="err-text" role="alert">{errors.agree}</em>}
-            <button className="btn btn-accent block lg" type="submit"><Lock size={18} />{tx('ادفع', 'Pay')} {money(q.total)}</button>
+            {apiError && <p className="err-text" role="alert">{apiError}</p>}
+            <button className="btn btn-accent block lg" type="submit" disabled={busy}><Lock size={18} />{busy ? tx('جارٍ تحويلك لصفحة الدفع…', 'Redirecting to payment…') : <>{tx('ادفع', 'Pay')} {money(q.total)}</>}</button>
           </section>
         </form>
 

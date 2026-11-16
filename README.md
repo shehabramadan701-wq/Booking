@@ -23,7 +23,17 @@ cp .env.example .env
 npm run dev        # http://localhost:4000/api/health
 ```
 
-لجعل الواجهة تقرأ من الـ API بدل البيانات المحلية: أنشئ `client/.env` وفيه `VITE_API_URL=http://localhost:4000/api`.
+### تجربة الحجز والدفع الحقيقي (MyFatoorah — بيئة الاختبار)
+
+1. في `server/.env` ضع:
+   - `MYFATOORAH_API_KEY=` مفتاح الاختبار العام من صفحة «API Key → Test (Demo) Token» في توثيق MyFatoorah، أو مفتاح حسابك التجريبي.
+   - `ADMIN_API_KEY=` أي نص سري من 16 حرفاً فأكثر (مفتاح لوحة التحكم).
+2. أنشئ `client/.env` وفيه `VITE_API_URL=http://localhost:4000/api`.
+3. شغّل الخادم ثم الواجهة (`npm run dev` في كل مجلد) وافتح `http://localhost:5173`.
+4. احجز أي غرفة: ستُحوَّل إلى صفحة MyFatoorah التجريبية؛ ادفع ببطاقة اختبار من صفحة «Test Cards» في توثيقهم، وستعود للموقع والحجز «مؤكد».
+5. لوحة التحكم ← «الربط والإعدادات» ← أدخل `ADMIN_API_KEY`: تظهر حجوزات **كل الزوار** القادمة من الخادم.
+
+في هذا الوضع السعر يُحسب في الخادم، والحجوزات تُحفظ في `server/data/bookings.json` (مؤقتاً لحين ربط PostgreSQL).
 
 ## ما الذي يعمل الآن
 

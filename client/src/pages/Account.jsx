@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
-import { CheckCircle2, Compass, Heart, Printer, Ticket } from 'lucide-react';
+import { CheckCircle2, Clock, Compass, Heart, Printer, Ticket } from 'lucide-react';
+import { api } from '../api/index.js';
 import { useApp } from '../context/AppContext.jsx';
 import { destById, hotelById, MEALS } from '../data/catalog.js';
 import { addDays, todayISO } from '../lib/search.js';
@@ -14,8 +15,26 @@ export function statusLabel(s, tx) {
 
 export function Confirmation() {
   const { ref } = useParams();
-  const { bookings, tx, L, lang, money, fmtDate } = useApp();
+  const { bookings, saveBooking, tx, L, lang, money, fmtDate } = useApp();
   const b = bookings.find((x) => x.ref === ref);
+  const [checking, setChecking] = useState(api.remote);
+
+  // مع الخادم: بعد العودة من صفحة الدفع نطلب من الخادم التحقق من MyFatoorah وتأكيد الحجز
+  useEffect(() => {
+    if (!api.remote) return undefined;
+    let live = true;
+    (async () => {
+      try {
+        let server = await api.getBooking(ref);
+        if (server.status === 'pending') server = await api.confirmBooking(ref);
+        if (live) saveBooking({ ...server, remote: true });
+      } catch { /* يبقى ما هو محفوظ محلياً */ }
+      if (live) setChecking(false);
+    })();
+    return () => { live = false; };
+  }, [ref]); // eslint-disable-line
+
+  if (!b && checking) return <div className="container section narrow"><div className="skel" style={{ height: 360 }} /></div>;
   if (!b) return <Navigate to="/bookings" replace />;
   const h = hotelById[b.hotelId];
   const room = h.rooms.find((r) => r.id === b.roomId);
@@ -23,9 +42,13 @@ export function Confirmation() {
   return (
     <div className="container section narrow">
       <div className="card pad confirm">
-        <CheckCircle2 size={56} className="ok-icon" />
-        <h1>{b.status === 'cancelled' ? tx('تم إلغاء هذا الحجز', 'This booking was cancelled') : tx('تم تأكيد حجزك', 'Your booking is confirmed')}</h1>
-        <p className="muted">{tx(`أرسلنا القسيمة إلى ${b.guest.email}`, `We sent the voucher to ${b.guest.email}`)}</p>
+        {b.status === 'pending' ? <Clock size={56} className="warn-icon" /> : <CheckCircle2 size={56} className="ok-icon" />}
+        <h1>{b.status === 'cancelled' ? tx('تم إلغاء هذا الحجز', 'This booking was cancelled')
+          : b.status === 'pending' ? (checking ? tx('جارٍ التحقق من الدفع…', 'Checking your payment…') : tx('الدفع لم يكتمل بعد', 'Payment not completed yet'))
+            : tx('تم تأكيد حجزك', 'Your booking is confirmed')}</h1>
+        <p className="muted">{b.status === 'pending'
+          ? tx('لم يُخصم أي مبلغ. الحجز غير مؤكد حتى يكتمل الدفع؛ يمكنك الحجز من جديد من صفحة الفندق.', 'Nothing was charged. The booking is not confirmed until payment completes; you can book again from the hotel page.')
+          : tx(`أرسلنا القسيمة إلى ${b.guest.email}`, `We sent the voucher to ${b.guest.email}`)}</p>
         <div className="ref"><small>{tx('رقم الحجز', 'Booking reference')}</small><b dir="ltr">{b.ref}</b></div>
         <div className="summary-hotel"><Img id={h.images[0]} w={300} alt="" /><div><b>{L(h.name)}</b><small className="muted">{L(h.district)}، {destById[h.destId][lang]}</small></div></div>
         <dl className="summary-facts wide">
@@ -33,8 +56,8 @@ export function Confirmation() {
           <dt>{tx('الوصول', 'Check‑in')}</dt><dd>{fmtDate(b.checkIn, long)} · {h.checkIn}</dd>
           <dt>{tx('المغادرة', 'Check‑out')}</dt><dd>{fmtDate(b.checkOut, long)} · {h.checkOut}</dd>
           <dt>{tx('الغرفة', 'Room')}</dt><dd>{b.rooms} × {L(room.name)} · {L(MEALS[b.meal])}</dd>
-          <dt>{tx('الدفع', 'Payment')}</dt><dd>{L(PAY_METHODS.find((m) => m.id === b.method))}</dd>
-          <dt className="grand">{tx('المبلغ المدفوع', 'Amount paid')}</dt><dd className="grand">{money(b.totalUsd, b.currency)}</dd>
+          <dt>{tx('الدفع', 'Payment')}</dt><dd>{L(PAY_METHODS.find((m) => m.id === b.method) || PAY_METHODS[0])}</dd>
+          <dt className="grand">{b.status === 'pending' ? tx('المبلغ المطلوب', 'Amount due') : tx('المبلغ المدفوع', 'Amount paid')}</dt><dd className="grand">{money(b.totalUsd, b.currency)}</dd>
         </dl>
         <div className="modal-actions no-print">
           <button className="btn btn-ghost" onClick={() => window.print()}><Printer size={17} />{tx('طباعة القسيمة', 'Print voucher')}</button>

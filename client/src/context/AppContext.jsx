@@ -80,6 +80,8 @@ export function AppProvider({ children }) {
     toggleFav: (id) => setFavorites((f) => (f.includes(id) ? f.filter((x) => x !== id) : [...f, id])),
     bookings,
     addBooking: (b) => setBookings((bs) => [b, ...bs]),
+    // يضيف الحجز أو يحدّثه إن كان موجوداً (يُستخدم مع الحجوزات القادمة من الخادم)
+    saveBooking: (b) => setBookings((bs) => (bs.some((x) => x.ref === b.ref) ? bs.map((x) => (x.ref === b.ref ? { ...x, ...b } : x)) : [b, ...bs])),
     cancelBooking: (ref) => setBookings((bs) => bs.map((b) => (b.ref === ref ? { ...b, status: 'cancelled' } : b))),
     admin, setAdmin,
   }), [lang, tx, L, locale, currency, money, fmtDate, factor, user, favorites, bookings, admin, setLang, setCurrency, setUser, setFavorites, setBookings, setAdmin]);

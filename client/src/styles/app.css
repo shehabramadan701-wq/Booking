@@ -359,6 +359,7 @@ button:disabled { cursor: not-allowed; opacity: .5; }
 .confirm .summary-hotel, .confirm .summary-facts { width: 100%; }
 .summary-facts.wide { text-align: start; }
 .ok-icon { color: var(--ok); }
+.warn-icon { color: var(--warn); }
 .ref { background: var(--brand-soft); border-radius: 12px; padding: 10px 28px; display: grid; }
 .ref b { font-size: 1.5rem; letter-spacing: 2px; color: var(--brand-dark); }
 .tabs { display: flex; gap: 6px; margin: 14px 0; border-bottom: 1px solid var(--line); }

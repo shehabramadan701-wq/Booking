@@ -123,6 +123,8 @@ export function safeDates(ci, co) {
 }
 
 // ——— التسعير ———
+// أسعار صرف تجريبية (الأساس دولار) — يستخدمها الخادم لتحويل مبلغ الفاتورة
+export const RATES = { USD: 1, SAR: 3.75, AED: 3.6725, KWD: 0.307, EGP: 50.2, EUR: 0.92, GBP: 0.79 };
 export const TAX_RATE = 0.12; // ضرائب ورسوم تقديرية
 
 export function quote({ nightly, nights, rooms, factor = 1, promoPct = 0 }) {

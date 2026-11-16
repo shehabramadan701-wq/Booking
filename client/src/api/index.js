@@ -9,9 +9,19 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function remote(path, params) {
   const qs = new URLSearchParams(Object.entries(params || {}).filter(([, v]) => v !== '' && v != null));
-  const res = await fetch(`${BASE}${path}${qs.size ? `?${qs}` : ''}`, { credentials: 'include' });
+  const res = await fetch(`${BASE}${path}${qs.size ? `?${qs}` : ''}`);
   if (!res.ok) throw new Error(`API ${res.status}`);
   return res.json();
+}
+async function send(path, body, token) {
+  const res = await fetch(`${BASE}${path}`, {
+    method: body ? 'POST' : 'GET',
+    headers: { ...(body && { 'Content-Type': 'application/json' }), ...(token && { Authorization: `Bearer ${token}` }) },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) throw Object.assign(new Error(json.error || `API ${res.status}`), { status: res.status });
+  return json;
 }
 
 // overrides: تعديلات لوحة التحكم على الفنادق (إيقاف/تمييز)
@@ -19,6 +29,12 @@ const withOverrides = (overrides = {}) =>
   HOTELS.map((h) => (overrides[h.id] ? { ...h, ...overrides[h.id] } : h));
 
 export const api = {
+  // true عندما تكون الواجهة موصولة بالخادم: الحجز والدفع يتمّان هناك فعلياً
+  remote: Boolean(BASE),
+  createBooking: (payload) => send('/bookings', payload),
+  getBooking: (ref) => send(`/bookings/${encodeURIComponent(ref)}`),
+  confirmBooking: (ref) => send(`/bookings/${encodeURIComponent(ref)}/confirm`, {}),
+  adminBookings: (key) => send('/admin/bookings', null, key),
   async search(params, { factor, overrides } = {}) {
     if (BASE) return remote('/hotels/search', params);
     await wait(180);

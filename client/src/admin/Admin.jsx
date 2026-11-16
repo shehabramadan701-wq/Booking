@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, Navigate, NavLink, Route, Routes } from 'react-router-dom';
 import { BadgePercent, BedDouble, CreditCard, Download, ExternalLink, LayoutDashboard, Plug, Search, Tag, Ticket, Trash2, Users } from 'lucide-react';
 import { DEFAULT_ADMIN, useApp } from '../context/AppContext.jsx';
+import { api } from '../api/index.js';
 import { DESTINATIONS, destById, hotelById, HOTELS } from '../data/catalog.js';
 import { Logo } from '../components/Layout.jsx';
 import { statusLabel } from '../pages/Account.jsx';
@@ -12,12 +13,64 @@ import '../styles/admin.css';
 const STATUSES = ['confirmed', 'pending', 'completed', 'cancelled', 'refunded'];
 const methodById = Object.fromEntries(PAY_METHODS.map((m) => [m.id, m]));
 
+const KEY_SLOT = 'nz.adminKey';
+const readKey = () => { try { return sessionStorage.getItem(KEY_SLOT) || ''; } catch { return ''; } };
+
+// حجوزات كل الزوار من الخادم (تتطلب مفتاح الإدارة) — تُحدَّث كل 30 ثانية
+function useServerBookings() {
+  const [state, setState] = useState({ rows: [], error: '' });
+  useEffect(() => {
+    if (!api.remote) return undefined;
+    let live = true;
+    const load = async () => {
+      const key = readKey();
+      if (!key) { if (live) setState({ rows: [], error: 'no_key' }); return; }
+      try { const rows = await api.adminBookings(key); if (live) setState({ rows, error: '' }); }
+      catch (e) { if (live) setState({ rows: [], error: e.status === 401 ? 'bad_key' : 'offline' }); }
+    };
+    load();
+    const t = setInterval(load, 30000);
+    window.addEventListener('nz-admin-key', load);
+    return () => { live = false; clearInterval(t); window.removeEventListener('nz-admin-key', load); };
+  }, []);
+  return state;
+}
+
 function useAllBookings() {
   const { bookings, admin } = useApp();
+  const server = useServerBookings();
   return useMemo(() => {
-    const mine = bookings.map((b) => ({ ...b, destId: hotelById[b.hotelId].destId, createdAt: b.createdAt.slice(0, 10), supplier: 'TBO', live: true }));
-    return [...mine, ...demoBookings(admin.markupGlobal)].map((b) => (admin.bookingStatus[b.ref] ? { ...b, status: admin.bookingStatus[b.ref] } : b));
-  }, [bookings, admin.bookingStatus, admin.markupGlobal]);
+    const norm = (b) => ({ method: 'card', ...b, destId: hotelById[b.hotelId].destId, createdAt: b.createdAt.slice(0, 10), supplier: 'TBO', live: true });
+    const fromServer = server.rows.filter((b) => hotelById[b.hotelId]).map(norm);
+    const seen = new Set(fromServer.map((b) => b.ref));
+    const mine = bookings.filter((b) => !seen.has(b.ref)).map(norm);
+    return [...fromServer, ...mine, ...demoBookings(admin.markupGlobal)].map((b) => (admin.bookingStatus[b.ref] ? { ...b, status: admin.bookingStatus[b.ref] } : b));
+  }, [bookings, server.rows, admin.bookingStatus, admin.markupGlobal]);
+}
+
+function ServerKeyCard() {
+  const { tx } = useApp();
+  const server = useServerBookings();
+  const [key, setKey] = useState(readKey);
+  if (!api.remote) return null;
+  const save = (e) => {
+    e.preventDefault();
+    try { sessionStorage.setItem(KEY_SLOT, key.trim()); } catch { /* التخزين غير متاح */ }
+    window.dispatchEvent(new Event('nz-admin-key'));
+  };
+  const msg = { no_key: tx('أدخل مفتاح الإدارة لعرض حجوزات كل الزوار.', 'Enter the admin key to see bookings from all visitors.'), bad_key: tx('المفتاح غير صحيح. راجع قيمة ADMIN_API_KEY على الخادم.', 'Wrong key. Check ADMIN_API_KEY on the server.'), offline: tx('تعذّر الاتصال بالخادم. تأكد أنه يعمل ثم حاول مجدداً.', 'Could not reach the server. Make sure it is running, then try again.') }[server.error];
+  return (
+    <section className="card pad">
+      <h2>{tx('الاتصال بالخادم', 'Server connection')}</h2>
+      <form className="toolbar" onSubmit={save}>
+        <input type="password" value={key} onChange={(e) => setKey(e.target.value)} placeholder={tx('مفتاح الإدارة', 'Admin key')} dir="ltr" autoComplete="off" maxLength={200} aria-label={tx('مفتاح الإدارة', 'Admin key')} />
+        <button className="btn btn-brand btn-sm">{tx('اتصال', 'Connect')}</button>
+        {msg ? <span className={server.error === 'no_key' ? 'muted' : 'err-text'} role="status">{msg}</span>
+          : <span className="ok-text" role="status">{tx(`متصل — ${server.rows.length} حجز على الخادم`, `Connected — ${server.rows.length} bookings on the server`)}</span>}
+      </form>
+      <p className="muted">{tx('المفتاح يُحفظ في هذه الجلسة فقط ويُمسح عند إغلاق المتصفح.', 'The key is kept for this session only and cleared when the browser closes.')}</p>
+    </section>
+  );
 }
 
 function BarChart({ data, format, label }) {
@@ -376,6 +429,7 @@ function SettingsAdmin() {
   return (
     <>
       <h1>{tx('الربط والإعدادات', 'Integrations & settings')}</h1>
+      <ServerKeyCard />
       <div className="card table-wrap">
         <table>
           <thead><tr><th>{tx('الخدمة', 'Service')}</th><th>{tx('الوصف', 'Description')}</th><th>{tx('الحالة', 'Status')}</th><th>{tx('مفعّل', 'Enabled')}</th></tr></thead>

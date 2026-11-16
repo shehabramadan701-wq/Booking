@@ -35,9 +35,9 @@ export const myfatoorah = {
     return { invoiceId: data.InvoiceId, paymentUrl: data.InvoiceURL };
   },
 
-  // لا نعتمد على ما يرسله المتصفح أو الـ webhook وحده: نسأل MyFatoorah مباشرة عن حالة الفاتورة
-  async isPaid(invoiceId, expectedAmount) {
+  // لا نعتمد على ما يرسله المتصفح: نسأل MyFatoorah عن الفاتورة التي أنشأناها نحن ونطابق مرجع الحجز
+  async isPaid(invoiceId, ref) {
     const data = await call('/v2/GetPaymentStatus', { Key: String(invoiceId), KeyType: 'InvoiceId' });
-    return data.InvoiceStatus === 'Paid' && Number(data.InvoiceValue) >= expectedAmount;
+    return data.InvoiceStatus === 'Paid' && data.CustomerReference === ref;
   },
 };

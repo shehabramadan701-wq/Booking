@@ -17,7 +17,7 @@ app.set('trust proxy', 1); // خلف Nginx / Cloudflare
 app.use(helmet()); // رؤوس أمان: HSTS, noSniff, frameguard...
 app.use(cors({
   origin: (origin, cb) => cb(null, !origin || config.corsOrigins.includes(origin)),
-  credentials: true, methods: ['GET', 'POST', 'PATCH', 'DELETE'],
+  credentials: true, methods: ['GET', 'POST', 'PATCH', 'DELETE'], allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 app.use(express.json({ limit: '20kb' })); // منع الحمولات الضخمة
 app.use(hpp()); // منع تلويث باراميترات الـ query
